@@ -1,0 +1,226 @@
+string button.sign2(String deal_id)
+{
+// Donnée Deal
+
+record = zoho.crm.getRecordById("Deals",deal_id);
+owner = record.getJSON("Owner");
+//info owner;
+nameOwner = owner.get("name");
+//info nameOwner;
+emailOwner = owner.get("email");
+//info emailOwner;
+if(nameOwner != "CEO")
+{
+	titreSignataire = "Account Manager";
+}
+else
+{
+	titreSignataire = "CEO";
+}
+Hourly_Rate = record.getJSon("Hourly_Rate");
+
+msg = "";
+if(Hourly_Rate.isNull())
+{
+	msg = msg + "Vous n'avez pas rempli le champs Hourly Rate. ";
+}
+company = record.getJSON("Account_Name");
+Initial_Bank_h = record.getJSON("Initial_Bank_h");
+//info Initial_Bank_h;
+if(Initial_Bank_h.isNull())
+{
+	msg = msg + "Vous n'avez pas rempli le champs Initial Bank hour." + " ";
+}
+ech_ance = record.getJSON("ch_ance");
+if(ech_ance.isNull())
+{
+	msg = msg + "Vous n'avez pas rempli le champs échéance." + " ";
+}
+//info company;
+company_name = company.getJSON("name");
+account_id = company.getJSON("id");
+contact = record.getJSON("Contact_Name");
+if(contact.isNull())
+{
+	msg = msg + "Vous n'avez pas ajouter de contact!";
+}
+
+if(!contact.isNull() && !Initial_Bank_h.isNull() && !Hourly_Rate.isNull() && !ech_ance.isNull())
+{
+	contact_name = contact.getJSON("name");
+	// recherche information sur la langue 
+	company_id = company.getJSON("id");
+	account_details = zoho.crm.getRecordById("Accounts",company_id);
+	languePref = account_details.getJSON("Language_Preference");
+	// recherche information sur le titre
+	id = record.getJSON("Contact_Name").getJSON("id");
+	contact_details = zoho.crm.getRecordById("Contacts",id);
+	title = contact_details.getJSON("Title");
+	email = contact_details.getJSON("Email");
+	// Template in Zoho Sign
+	zohoSign = zoho.sign.getTemplates();
+	template = zohoSign.getJSON("templates");
+	info "Voici les templates " + template;
+	docID = "";
+	customer_action_id = "";
+	tooly_action_id = "";
+	view_action_id = "";
+	fieldTextData = Map();
+	actionMap = Map();
+	//who is the owner of the template
+
+	for each  doc in template
+	{
+		docIds = doc.getJSON("document_ids");
+		actions_doc = doc.get("actions");
+		document_name = docIds.getJSON("document_name");
+		TemplateID = doc.get("template_id");
+		//info document_name ;
+		//info TemplateID ;
+		owner_email = doc.getJSON("owner_email");
+
+		
+		if(TemplateID == "TEMPLATE_ID" && languePref == "fr" && owner_email1 == owner_email)
+		{
+			//info doc;
+			info "Requirement met for sign in French";
+			fieldTextData.put("Point de contact",record.getJSON("Owner").getJSON("name"));
+			fieldTextData.put("Banque d'heures",Initial_Bank_h + " h");
+			fieldTextData.put("Nom de l'entreprise",company_name);
+			docID = "DocID1";
+			//info docID;
+			//info "doc";
+			for each  action in actions_doc
+			{
+				role = action.get("role");
+				//info role;
+				action_id = action.get("action_id");
+				if(role == "Client")
+				{
+					//info "client";
+					customer_action_id = action_id;
+					//info customer_action_id;
+				}
+				else if(role == "Gestionnaire de compte")
+				{
+					tooly_action_id = action_id;
+				}
+				else if(role == "Approbatrice")
+				{
+					view_action_id = action_id;
+				}
+			}
+		}
+		if(document_name.containsIgnoreCase("(EN) Customer contract") && languePref == "English")
+		{
+			//info languePref;
+			//info doc;
+			info "Requirement met for sign in English";
+			fieldTextData.put("Point of contact",record.getJSON("Owner").getJSON("name"));
+			fieldTextData.put("Company name",company_name);
+			fieldTextData.put("Initial bank of hours",Initial_Bank_h + " h");
+			fieldTextData.put("Hourly rate",Hourly_Rate + " $/h");
+			fieldTextData.put("Bank of hours expiry",ech_ance);
+			docID = "Doc_id";
+			//info docID;
+			//info "ici";
+			for each  action in actions_doc
+			{
+				//info action;
+				//info "here";
+				role = action.get("role");
+				//info role;
+				action_id = action.get("action_id");
+				if(role == "Customer")
+				{
+					//info "client";
+					customer_action_id = action_id;
+					//info customer_action_id;
+				}
+				else if(role == "Account manager")
+				{
+				compagny_action_id = action_id;
+				}
+				else if(role == "Approver")
+				{
+					view_action_id = action_id;
+				}
+			}
+		}
+	}
+	fieldTextData.put("Taux horaire",Hourly_Rate + " $/h");
+	
+	fieldTextData.put("Full name",nameOwner);
+	fieldTextData.put("Job title",titreSignataire);
+	fieldTextData.put("Échéance",ech_ance);
+	actionMap.put("field_data",{"field_text_data":fieldTextData});
+	eachActionMap1 = Map();
+	eachActionMap1.put("recipient_name",contact_name);
+	eachActionMap1.put("recipient_email",email);
+	eachActionMap1.put("action_type","SIGN");
+	eachActionMap1.put("action_id",customer_action_id);
+	eachActionMap1.put("role",title);
+	eachActionMap1.put("verify_recipient","false");
+	eachActionMap2 = Map();
+	eachActionMap2.put("recipient_name",nameOwner);
+	eachActionMap2.put("recipient_email",emailOwner);
+	eachActionMap2.put("action_type","SIGN");
+	eachActionMap2.put("action_id",compagny_action_id);
+	eachActionMap2.put("role","Ceo");
+	eachActionMap2.put("verify_recipient","false");
+	eachActionMap3 = Map();
+	eachActionMap3.put("recipient_name","Test");
+	eachActionMap3.put("recipient_email","test@test.fr");
+	eachActionMap3.put("action_type","VIEW");
+	eachActionMap3.put("action_id",view_action_id);
+	eachActionMap3.put("role","Approbatrice");
+	eachActionMap3.put("verify_recipient","false");
+	fieldList = List();
+	fieldList.add(eachActionMap1);
+	fieldList.add(eachActionMap2);
+	fieldList.add(eachActionMap3);
+	actionMap.put("actions",fieldList);
+	submitMap = Map();
+	submitMap.put("templates",actionMap);
+	parameters = Map();
+	parameters.put("is_quicksend","true");
+	parameters.put("data",submitMap);
+	info parameters;
+	response = zoho.sign.createUsingTemplate(docID,parameters);
+	info "---";
+	info response;
+	info "---";
+//
+À ajouter si vous voulez enregistrer dans Zoho Sign document l'ID pour pouvoir tracker la reception de la signature
+
+	// 	//Get the Template Name - used as the name for the record in the "ZohoSign Documents" module in Zoho CRM later
+	// 	template = zoho.sign.getTemplateById(docID);
+	// 	templatename = template.get("templates").get("template_name");
+	// 	//Get the Zoho Sign Document ID
+	// 	requests = response.get("requests");
+	// 	docs = requests.get("document_ids");
+	// 	docinfo = docs.get(0);
+	// 	docid = docinfo.get("document_id");
+	// 	//Get the Zoho Sign Request ID
+	// 	reqid = requests.get("request_id");
+	// 	info reqid;
+	// 	info "req";
+	// 	docinfo = requests.getJSON("document_fields");
+	// 	docid = docinfo.getJSON("document_id");
+	// 	info docid;
+	// 	info "doc id";
+	// 	//Create Map for CRM Record - ZohoSign Documents
+	// 	recordmap = Map();
+	// 	recordmap.put("Name",templatename);
+	// 	recordmap.put("zohosign__Account",account_id);
+	// 	recordmap.put("zohosign__Deal",deal_id);
+	// 	//	recordmap.put("zohosign__Owner",deal_id.get("Owner").get("id"));
+	// 	recordmap.put("zohosign__ZohoSign_Document_ID",docid);
+	// 	recordmap.put("zohosign__Module_Record_ID",deal_id);
+	// 	recordmap.put("zohosign__Document_Status","Out for Signature");
+	// 	create = zoho.crm.createRecord("zohosign__ZohoSign_Documents",recordmap);
+	// 	info create;
+	// 	msg = "Contrat envoyé!";
+}
+return msg;
+}
